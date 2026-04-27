@@ -17,3 +17,5 @@ Sistem de citire date de la masina si interpretare ESP32, MCP2515, OBD2 si Andro
 
 8.QA / Testing Engineer - David Martina Antonia
 
+
+Piese necesare : ESP32 , mcp 2515 , OBD2 
