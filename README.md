@@ -11,9 +11,9 @@ Sistem de citire date de la masina si interpretare ESP32, MCP2515, OBD2 si Andro
 
 5.Android Developer - Androne Ana Maria
 
-6.Backend / Cloud Database Engineer - Iancu George
+6.Android Developer - Iancu George
 
-7.Frontend Web Developer - Gabriela Adnana
+7.Android Developer - Gabriela Adnana
 
 8.QA / Testing Engineer - David Martina Antonia
 
