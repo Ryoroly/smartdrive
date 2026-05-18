@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:permission_handler/permission_handler.dart'; // Asigură-te că ai asta sus
 
 const String ESP32_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
 const String ESP32_WRITE_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
@@ -75,6 +76,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _initBluetooth() async {
+    // 1. Cerem permisiunile de la utilizator mai întâi
+    await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location, // Uneori necesar pentru scanare BLE
+    ].request();
+
+    // 2. Apoi pornim logica de Bluetooth
     if (await FlutterBluePlus.isSupported == false) return;
     FlutterBluePlus.adapterState.listen((BluetoothAdapterState state) {
       if (state == BluetoothAdapterState.on) _scanForESP32();
@@ -98,7 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _connectToDevice(BluetoothDevice device) async {
     try {
-      await device.connect();
+      await device.connect(license: License.free);
       setState(() {
         _espDevice = device;
         _isConnected = true;
@@ -133,9 +142,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _sendDataToESP() async {
     if (_isConnected && _writeCharacteristic != null) {
       String dataString = "${_userAccelerometerValues[0].toStringAsFixed(2)},"
-                          "${_userAccelerometerValues[1].toStringAsFixed(2)},"
-                          "${_userAccelerometerValues[2].toStringAsFixed(2)}";
-      
+          "${_userAccelerometerValues[1].toStringAsFixed(2)},"
+          "${_userAccelerometerValues[2].toStringAsFixed(2)}";
+
       setState(() {
         _lastSentPayload = dataString;
       });
@@ -159,8 +168,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('SmartDrive Dublu Monitor'),
         actions: [
-          Icon(_isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled, 
-               color: _isConnected ? Colors.blue : Colors.grey),
+          // Buton nou pentru scanare manuală
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Cauta ESP32',
+            onPressed: () {
+              if (!_isConnected) {
+                // Curățăm lista și căutăm din nou
+                _scanForESP32();
+                // Afișăm un mesaj mic pe ecran
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cautare ESP32 pornita...'), duration: Duration(seconds: 2)),
+                );
+              }
+            },
+          ),
+          Icon(_isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+              color: _isConnected ? Colors.blue : Colors.grey),
           const SizedBox(width: 15),
         ],
       ),
@@ -169,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text("1. MONITOARE LOCALE (DATE TRIMISE LA ESP32)", 
+            const Text("1. MONITOARE LOCALE (DATE TRIMISE LA ESP32)",
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent, letterSpacing: 1)),
             const SizedBox(height: 8),
             Card(
@@ -184,19 +208,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text("Axa Z (Sus-Jos):       ${_userAccelerometerValues[2].toStringAsFixed(2)} m/s²"),
                     const Divider(color: Colors.grey),
                     Text("String trimis prin BLE:  ", style: TextStyle(color: Colors.grey[400])),
-                    Text(_isConnected ? _lastSentPayload : "Deconectat (Nu se trimite)", 
+                    Text(_isConnected ? _lastSentPayload : "Deconectat (Nu se trimite)",
                         style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Colors.greenAccent)),
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 25),
 
-            const Text("2. REZULTATE CALCULATE (PRIMIT DE LA ESP32)", 
+            const Text("2. REZULTATE CALCULATE (PRIMIT DE LA ESP32)",
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orangeAccent, letterSpacing: 1)),
             const SizedBox(height: 8),
-            
+
             Card(
               elevation: 4,
               child: Padding(
@@ -218,9 +242,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             Card(
               color: profil['culoare'].withOpacity(0.1),
               child: Padding(
@@ -234,7 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 30),
 
             ElevatedButton.icon(
@@ -245,3 +269,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _aggressivenessScore += 15;
                   if (_aggressivenessScore > 100) _aggressivenessScore = 0;
                 });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
